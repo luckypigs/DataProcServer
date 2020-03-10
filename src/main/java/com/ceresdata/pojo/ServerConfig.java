@@ -17,6 +17,8 @@ public class ServerConfig {
     private String descRootDir;// 目标存储位置
     private int fileMaxSize = 50;// 文件大小（M）
     private int fileMaxMinute = 30;// 接收文件（minute）
+    private int r_port; //r类型数据的端口号
+    private int position;
     // 连接站点列表
     private List<Connect> connectList = new ArrayList<Connect>();
 
@@ -68,6 +70,22 @@ public class ServerConfig {
         this.fileMaxMinute = fileMaxMinute;
     }
 
+    public int getR_port() {
+        return r_port;
+    }
+
+    public void setR_port(int r_port) {
+        this.r_port = r_port;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
     public List<Connect> getConnectList() {
         return connectList;
     }
@@ -111,6 +129,7 @@ public class ServerConfig {
         this.fileMaxMinute = jsonObject.getInteger("fileMaxMinute");
         this.streamState = jsonObject.getIntValue("streamState");
         this.fileServerState = jsonObject.getIntValue("fileServerState");
+        this.position = jsonObject.getIntValue("position");
 
         JSONArray jsonArray = jsonObject.getJSONArray("connectList");
         if(jsonArray != null){

@@ -1,10 +1,13 @@
 package com.ceresdata.multiThreadServer;
 
+import com.ceresdata.config.DataProcessConfig;
 import com.ceresdata.pojo.PcapData;
+import com.ceresdata.pojo.ServerConfig;
 import com.ceresdata.service.PcapDataService;
 import com.ceresdata.service.impl.PcapDataServiceImpl;
 import com.ceresdata.tools.Trans;
 import com.ceresdata.util.PcapFileUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -14,17 +17,25 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MultiThreadSocketClient implements Runnable{
-    private final int R_PORT=5555;
+    @Autowired
+    private DataProcessConfig dataProcessConfig;
+    @Autowired
+    private ServerConfig serverConfig;
+
+    private final int R_PORT=serverConfig.getR_port();
     private String ip;
     private int port;
-    private String rootDir;// 存放的根目录
-    private Socket socket = null;
+    private Socket socket=null;
+    private String rootDir=serverConfig.getDescRootDir();// 存放的根目录
+    private int position=serverConfig.getPosition();
+
     // 是否可以接收数据
     private boolean isRunning = false;
     // socket 退出标记
     private boolean exit = false;
     //dao
-    private PcapDataService service=new PcapDataServiceImpl();
+    @Autowired
+    private PcapDataService service;
     //记录端口类型
     private int type=0;
     //记录时间
