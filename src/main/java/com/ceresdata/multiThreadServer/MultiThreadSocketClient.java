@@ -3,6 +3,7 @@ package com.ceresdata.multiThreadServer;
 import com.ceresdata.config.DataProcessConfig;
 import com.ceresdata.pojo.PcapData;
 import com.ceresdata.pojo.ServerConfig;
+import com.ceresdata.pojo.UserInfo;
 import com.ceresdata.service.PcapDataService;
 import com.ceresdata.service.impl.PcapDataServiceImpl;
 import com.ceresdata.tools.Trans;
@@ -173,6 +174,9 @@ public class MultiThreadSocketClient implements Runnable{
                         }
 
                         PcapData pcapdata = getPcapData(arrMsgBuff,type);
+                        UserInfo userInfo = new UserInfo();
+                        userInfo.setUser_id(pcapdata.getUserId());
+                        userInfo.setPosition(position);
                         byte[] dt =null;
                         if (type == 1) {
                             dt = new byte[PackageLen - 24];
@@ -189,18 +193,22 @@ public class MultiThreadSocketClient implements Runnable{
                         if(type==0){
                             String pathname=this.rootDir+File.separator+""+pcapdata.getUserId()+"_"+id.get(pcapdata.getUserId())+"_f.pcap";
                             pcapdata.setPath(pathname);
+                            userInfo.setFile_path(pathname);
                         }else{
                             String pathname=this.rootDir+File.separator+""+pcapdata.getUserId()+"_"+id.get(pcapdata.getUserId())+"_r.pcap";
                             pcapdata.setPath(pathname);
+                            userInfo.setFile_path(pathname);
                         }
 
                         long datatime = pcapFileUtil.writeFile(pcapdata.getPath(),dt);
                         if(datatime!=id.get(pcapdata.getUserId())){
                             id.put(pcapdata.getUserId(),datatime);
+                            //修改userinfo表
                         }
 
                         // 存放到数据库中
                         service.save(pcapdata);
+                        service.save_userInfo(userInfo);
 
 
                         arrMsgBuff = new byte[20000];

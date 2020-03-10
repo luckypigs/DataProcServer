@@ -2,6 +2,7 @@ package com.ceresdata.dao;
 
 
 import com.ceresdata.pojo.PcapData;
+import com.ceresdata.pojo.UserInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -40,6 +41,13 @@ public class PcapDataDAO {
         }else{
             return null;
         }
+    }
+    public void save_userInfo(UserInfo userInfo){
+        String sql="insert into user_info (`user_id`,`position`,`file_path`)" +
+                " values('" + userInfo.getUser_id()
+                +"','"+userInfo.getPosition()
+                +"','"+userInfo.getFile_path()+"')";
+        jdbcTemplate.update(sql);
     }
 }
 /*

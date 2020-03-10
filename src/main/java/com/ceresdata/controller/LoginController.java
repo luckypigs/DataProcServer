@@ -80,5 +80,19 @@ public class LoginController {
         }
     }
 
+    /**
+     * 获取日志
+     */
+    @GetMapping(value = "/api/log")
+    @ResponseBody
+    public ResultMsg getLog(Connect connect){
+        boolean flag =  this.dataProcessServer.connect(connect);
+        if(flag){
+            return ResultMsg.success("建立连接成功");
+        }else{
+            return ResultMsg.error("建立连接失败");
+        }
+    }
+
 
 }
