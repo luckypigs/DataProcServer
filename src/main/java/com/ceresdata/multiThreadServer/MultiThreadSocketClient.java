@@ -1,226 +1,173 @@
 package com.ceresdata.multiThreadServer;
 
-import com.ceresdata.config.DataProcessConfig;
+import com.ceresdata.pojo.LogInfo;
 import com.ceresdata.pojo.PcapData;
 import com.ceresdata.pojo.ServerConfig;
 import com.ceresdata.pojo.UserInfo;
 import com.ceresdata.service.PcapDataService;
-import com.ceresdata.service.impl.PcapDataServiceImpl;
 import com.ceresdata.tools.Trans;
 import com.ceresdata.util.PcapFileUtil;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.ceresdata.util.ResultMsg;
 
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MultiThreadSocketClient implements Runnable{
-    @Autowired
-    private DataProcessConfig dataProcessConfig;
-    @Autowired
-    private ServerConfig serverConfig;
 
-    private final int R_PORT=serverConfig.getR_port();
+    private DataProcessServer dataProcessServer;
+    private ServerConfig serverConfig;
+    static long countByte=0;//已读字节数
+    static int countPa=0;//已读包数
+
+    private int R_PORT;
     private String ip;
     private int port;
-    private Socket socket=null;
-    private String rootDir=serverConfig.getDescRootDir();// 存放的根目录
-    private int position=serverConfig.getPosition();
+    private Socket socket;
+    private String rootDir;// 存放的根目录
+    private int position;
 
     // 是否可以接收数据
     private boolean isRunning = false;
     // socket 退出标记
     private boolean exit = false;
     //dao
-    @Autowired
     private PcapDataService service;
     //记录端口类型
-    private int type=0;
+    private int type;
     //记录时间
     long now;
     private static Map<Short,Long> id=new HashMap<>();
+    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss"); //设置格式 数据库的
 
 
-    public MultiThreadSocketClient(String ip,int port ,Socket socket){
+    public MultiThreadSocketClient(String ip,int port ,Socket socket,DataProcessServer dataProcessServer){
         this.ip = ip;
         this.port = port;
         this.socket = socket;
+        this.dataProcessServer=dataProcessServer;
+        this.serverConfig=this.dataProcessServer.getConfig();
+        this.service=dataProcessServer.getPcapDataService();
+        R_PORT=serverConfig.getR_port();
+        rootDir=serverConfig.getFilePath();
+        position=serverConfig.getPosition();
+
         if(port == R_PORT){
-            type=1;
-        }else{
             type=0;
+        }else{
+            type=1;
         }
     }
 
     public void run(){
         this.isRunning = true;
-        int CurrPt = 0;
-        int searchDataState = 0; //记录解析到数据了吗
-        byte[] Head = new byte[4];
-        int HeadPtr = 0;
-        int dwFrameLen = 0;
-        byte[] arrMsgBuff = new byte[20000];//一条message的缓存
-        short PackageLen = 0;//一条message（即帧头+pcap一行数据的头+内容）的全长
-        boolean haveSearchCompleteMessage=true;
-        int searchState = -1;//记录解析完一条数据了吗
+        int PackageLen = 0;//一条message（即帧头+pcap一行数据的头+内容）的全长
         try (
                 DataInputStream inputStream = new DataInputStream(socket.getInputStream());
 
-
         ) {
-            now = System.currentTimeMillis();
+
             while (!exit) {
                 // 开始接收文件
-                byte[] data = new byte[20000];//tcp缓存
+                int headLen;
+                if(type==0){
+                    headLen=24;//tcp缓存
+                }else{
+                    headLen=32;
+                }
+                byte[]data=new byte[headLen];
                 int length = -1;
                 // 读取数据到内存中
                 length = inputStream.read(data);
-                if(length>0) {
-                    do {
-                        searchState=0;
-                        for (byte ch = 0; CurrPt < length; CurrPt++) {
-                            ch = data[CurrPt];
-                            switch (searchDataState) {
-                                case 0: {
-                                    Head[HeadPtr++] = ch;
-                                    if (HeadPtr == 4) {
-                                        arrMsgBuff[0] = data[0];
-                                        arrMsgBuff[1] = data[1];
-                                        arrMsgBuff[2] = data[2];
-                                        arrMsgBuff[3] = data[3];
-                                        searchDataState = 1;
-                                        HeadPtr = 0;//包头完整读取，置0
-                                        //检索header
-                                        if (Head[0] == 0x04 && Head[1] == (byte) 0xCF && Head[2] == 0x5F && Head[3] == (byte) 0xFF) {
-                                            dwFrameLen = 4;
-                                            if (CurrPt==length-1){
-                                                searchDataState=1;
-                                                haveSearchCompleteMessage=false;
-                                            }
-                                        }
-
-                                    }else if (HeadPtr<4&&CurrPt==length-1){
-                                        //包头没有读完整，包头被分割到了两次tcp包
-                                        searchDataState=0; //下一个包来时继续向Head中的第HeadPtr个元素追加
-                                        haveSearchCompleteMessage=false;
-                                    }
-                                }
-                                break;
-                                case 1: {//1:已找到头，寻找剩余部分
-                                    arrMsgBuff[dwFrameLen++] = ch;
-                                    if (dwFrameLen<=13&&CurrPt==length-1){
-                                        //arrMsgBuff[12]和arrMsgBuff[13]为单条message的长度，单条报文将两个字节分割
-                                        //或还没读到12、13字节处
-                                        haveSearchCompleteMessage=false;
-                                        searchDataState = 1;
-                                    }
-                                    else if (dwFrameLen == 14) {
-                                        byte[] s_PackageLen = new byte[]{arrMsgBuff[12], arrMsgBuff[13]};
-                                        PackageLen = Trans.byte2short(s_PackageLen);//得到单挑message的全长
-                                    }
-                                    else if (dwFrameLen>14){
-                                        if (dwFrameLen==PackageLen&&CurrPt==length-1){
-                                            //仅包含完整的一帧数据
-                                            searchState = 2;
-                                            searchDataState = 0;
-
-                                        }
-                                        else if (dwFrameLen<PackageLen) {
-                                            //一条message未读完整，for循环继续
-                                            searchDataState = 1;
-                                        }
-                                        else if(dwFrameLen==PackageLen&&CurrPt<length-1){
-                                            //一条数据接收完整，但还有数据，先跳出for循环处理此条message，更改do-while循环标识searchState=1
-                                            searchState = 1;
-                                            searchDataState = 0;
-                                        }
-                                        else if (dwFrameLen<PackageLen&&CurrPt==length-1){
-                                            ////一条数据未接收完整
-                                            haveSearchCompleteMessage=false;
-                                        }
-                                    }
-                                }
-                                break;
-                                default:
-                                    break;
-                            }
-                            if (searchState == 1 && searchDataState == 0) {
-                                //一条数据接收完整，但还有数据，先跳出for循环处理此条message，更改do-while循环标识searchState=1
-                                CurrPt++;
-                                dwFrameLen=0;
-                                break;
-                            }else if (searchState==2&&searchDataState==0){
-                                //仅包含完整的一帧数据
-                                CurrPt=0;
-                                dwFrameLen=0;
-                                searchState=0;
-                                break;
-                            }else if (!haveSearchCompleteMessage){
-                                //一条数据未接收完整
-                                CurrPt=0;
-                                //一条data不完整就跳出for循环
-                                //判断是否一条数据没接收完整，更新do_while循环判断依据searchState的值
-                                searchState = -1;//读空了缓存区数据
-                                break;
-                            }
-                        }
-
-                        if (searchState == -1){
-                            haveSearchCompleteMessage=true;
-                            break;
-                        }
-
-                        PcapData pcapdata = getPcapData(arrMsgBuff,type);
+                countByte+=length;
+                if(length==headLen) {
+                    if (data[0] == 0x04 && data[1] == (byte) 0xCF && data[2] == 0x5F && data[3] == (byte) 0xFF) {
+                        now = System.currentTimeMillis()/1000;
+                        PcapData pcapdata = getPcapData(data, type);
+                        PackageLen = pcapdata.getLength();
                         UserInfo userInfo = new UserInfo();
                         userInfo.setUser_id(pcapdata.getUserId());
                         userInfo.setPosition(position);
-                        byte[] dt =null;
-                        if (type == 1) {
-                            dt = new byte[PackageLen - 24];
-                            System.arraycopy(arrMsgBuff, 24, dt, 0, PackageLen - 24);
-                        }else{
-                            dt = new byte[PackageLen - 32];
-                            System.arraycopy(arrMsgBuff, 32, dt, 0, PackageLen - 32);
+                        //初始化
+                        PcapFileUtil pcapFileUtil = new PcapFileUtil();
+                        pcapFileUtil.setFileMaxMinute(serverConfig.getFileMaxMinute());
+                        pcapFileUtil.setFileMaxSize(serverConfig.getFileMaxSize());
+
+                        long datatime = 0;
+                        if (service.getFilePath(pcapdata.getUserId()) == null) {
+                            id.put(pcapdata.getUserId(), now);
+                            service.save_userInfo(userInfo);
+                        }else if(service.getFilePath(pcapdata.getUserId()).length()!=0){
+                            String prePath=service.getFilePath(pcapdata.getUserId());
+                            String []sp=prePath.split("_");
+                            id.put(pcapdata.getUserId(),format.parse(sp[sp.length-2]).getTime());
+                        }
+                        if ( id.get(pcapdata.getUserId())==null||now - id.get(pcapdata.getUserId()) >= (pcapFileUtil.getFileMaxMinute() * 60 )) {
+                            id.put(pcapdata.getUserId(), now);
+                        }
+                        if (type == 0) {
+                            String pathname = this.rootDir + File.separator + "" + pcapdata.getUserId() + "_" + position +
+                                    "_" + format.format(id.get(pcapdata.getUserId())) + "_f.pcap";
+                            pcapdata.setPath(pathname);
+                            userInfo.setFile_path(pathname);
+                        } else {
+                            String pathname = this.rootDir + File.separator + "" + pcapdata.getUserId() + "_" + position +
+                                    "_" + format.format(id.get(pcapdata.getUserId())) + "_r.pcap";
+                            pcapdata.setPath(pathname);
+                            userInfo.setFile_path(pathname);
                         }
                         // 保存到 pcap 文件中 (根据规则，如果文件超过 30 M 或 时间大于30分钟，重新生成新文件)
-                        PcapFileUtil pcapFileUtil = new PcapFileUtil();
-                        if(id.get(pcapdata.getUserId())==null||now-id.get(pcapdata.getUserId())>=pcapFileUtil.getFileMaxMinute()){
-                            id.put(pcapdata.getUserId(),now);
-                        }
-                        if(type==0){
-                            String pathname=this.rootDir+File.separator+""+pcapdata.getUserId()+"_"+id.get(pcapdata.getUserId())+"_f.pcap";
-                            pcapdata.setPath(pathname);
-                            userInfo.setFile_path(pathname);
-                        }else{
-                            String pathname=this.rootDir+File.separator+""+pcapdata.getUserId()+"_"+id.get(pcapdata.getUserId())+"_r.pcap";
-                            pcapdata.setPath(pathname);
-                            userInfo.setFile_path(pathname);
+                        for (int i = 0; i * 20000 < PackageLen - headLen; i++) {
+                            int len = Math.min(20000, PackageLen - headLen - i * 20000);
+                            byte[] dt = new byte[len];
+                            inputStream.read(dt);
+                            countByte += len;
+                            datatime = pcapFileUtil.writeFile(pcapdata.getPath(), dt);
                         }
 
-                        long datatime = pcapFileUtil.writeFile(pcapdata.getPath(),dt);
-                        if(datatime!=id.get(pcapdata.getUserId())){
-                            id.put(pcapdata.getUserId(),datatime);
+
+                        if (datatime != id.get(pcapdata.getUserId())) {
+                            id.put(pcapdata.getUserId(), datatime);
                             //修改userinfo表
+                            if (type == 0) {
+                                String pathname = this.rootDir + File.separator + "" + pcapdata.getUserId() + "_" + position +
+                                        "_" + format.format(id.get(pcapdata.getUserId())) + "_f.pcap";
+                                userInfo.setFile_path(pathname);
+                            } else {
+                                String pathname = this.rootDir + File.separator + "" + pcapdata.getUserId() + "_" + position +
+                                        "_" + format.format(id.get(pcapdata.getUserId())) + "_r.pcap";
+                                userInfo.setFile_path(pathname);
+                            }
                         }
 
                         // 存放到数据库中
                         service.save(pcapdata);
-                        service.save_userInfo(userInfo);
+                        service.update_userInfo(userInfo);
+                        countPa++;
+                    }else{
+                        System.out.println("error");
+                    }
 
 
-                        arrMsgBuff = new byte[20000];
-                        Head=new byte[4];
-                    } while (searchState == 1);
                 }else{
+                    //没有读到完整帧头
                     break;
                 }
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    public long getLastTime(int user_id){
+        String path=service.getFilePath(user_id);
+        String []split=path.split("_");
+        return Long.valueOf(split[split.length-2]);
     }
 
     public PcapData getPcapData(byte[]arrMsgBuff,int type){
@@ -238,8 +185,7 @@ public class MultiThreadSocketClient implements Runnable{
         System.arraycopy(arrMsgBuff, 12, s_PackageLen, 0, 2);
         short PackageLen=Trans.byte2short(s_PackageLen);
         pcapData.setLength(PackageLen);
-        byte[] dt =null;
-        if (type == 1) {
+        if (type == 0) {
             pcapData.setModeCode(String.valueOf(arrMsgBuff[10]));
             pcapData.setCheck(String.valueOf(arrMsgBuff[11]));
 
@@ -250,9 +196,6 @@ public class MultiThreadSocketClient implements Runnable{
             byte[] id = new byte[2];
             System.arraycopy(arrMsgBuff, 22, id, 0, 2);
             pcapData.setUserId(Trans.byte2short(id));
-
-            dt = new byte[PackageLen - 24];
-            System.arraycopy(arrMsgBuff, 24, dt, 0, PackageLen - 24);
 
         }else{
             pcapData.setModeCode(String.valueOf(arrMsgBuff[10]));
@@ -268,9 +211,6 @@ public class MultiThreadSocketClient implements Runnable{
             System.arraycopy(arrMsgBuff, 30, id, 0, 2);
             pcapData.setUserId(Trans.byte2short(id));
 
-            dt = new byte[PackageLen - 32];
-            System.arraycopy(arrMsgBuff, 32, dt, 0, PackageLen - 32);
-
         }
         pcapData.setReveType(type);
         return pcapData;
@@ -281,6 +221,7 @@ public class MultiThreadSocketClient implements Runnable{
      */
     public void exit(){
         this.exit = true;
+        this.isRunning=false;
         this.close();
     }
     /**
@@ -288,7 +229,8 @@ public class MultiThreadSocketClient implements Runnable{
      */
     private void close(){
         try {
-            this.socket.close();
+            this.socket.shutdownInput();
+            //socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -308,6 +250,30 @@ public class MultiThreadSocketClient implements Runnable{
 
     public void setPort(int port) {
         this.port = port;
+    }
+
+    public static long getCountByte() {
+        return countByte;
+    }
+
+    public static void setCountByte(long countByte) {
+        MultiThreadSocketClient.countByte = countByte;
+    }
+
+    public static int getCountPa() {
+        return countPa;
+    }
+
+    public static void setCountPa(int countPa) {
+        MultiThreadSocketClient.countPa = countPa;
+    }
+    public static ResultMsg getLog(){
+        List<LogInfo> res= new ArrayList<>();
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss"); //设置格式
+        String timeText = format.format(System.currentTimeMillis());
+        LogInfo logInfo=new LogInfo(timeText,countByte,countPa);
+        res.add(logInfo);
+        return new ResultMsg(res);
     }
 
     /**

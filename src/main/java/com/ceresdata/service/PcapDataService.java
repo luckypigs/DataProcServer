@@ -10,4 +10,5 @@ public interface PcapDataService {
     void save(PcapData pcapData);
     String getFilePath(int user_id);
     void save_userInfo(UserInfo userInfo);
+    void update_userInfo(UserInfo userInfo);
 }

@@ -6,6 +6,9 @@ package com.ceresdata.pojo;
 public class Connect {
     private String ip;
     private int port;
+    private boolean socktState=true;
+    private boolean ismain;
+    private int position;
 
     public String getIp() {
         return ip;
@@ -21,5 +24,13 @@ public class Connect {
 
     public void setPort(int port) {
         this.port = port;
+    }
+
+    public boolean isSocktState() {
+        return socktState;
+    }
+
+    public void setSocktState(boolean socktState) {
+        this.socktState = socktState;
     }
 }

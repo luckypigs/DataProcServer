@@ -1,14 +1,19 @@
 package com.ceresdata.util;
 
+import com.ceresdata.pojo.ServerConfig;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 
 /**
  * pcap 文件写入工具类
  */
 public class PcapFileUtil {
-    private int fileMaxSize = 30*1024*1024;
+    private int fileMaxSize;
     private int fileMaxMinute;
 
     public int getFileMaxSize() {
@@ -40,6 +45,7 @@ public class PcapFileUtil {
      * @param bytes
      */
     public long writeFile(String path,byte[] bytes){
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss"); //设置格式 数据库的
         File file = new File(path);
         // 父目录不存在，创建目录
         File parentDirFile = file.getParentFile();
@@ -55,20 +61,26 @@ public class PcapFileUtil {
         String newpath="";
         long pre=0;
         for(int i=0;i<split.length;i++){
-            if(i!=split.length-2){
+            if(i==split.length-1){
                 newpath+=split[i];
+            } else if(i!=split.length-2){
+                newpath+=split[i]+"_";
             }else{
-                pre=Long.valueOf(split[i]);
-                newpath +=System.currentTimeMillis();
+                try {
+                    pre=format.parse(split[i]).getTime();
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+                newpath +=(format.format(System.currentTimeMillis()/1000)+"_");
             }
         }
-        if(file.length()>=fileMaxSize){
+        if(file.length()>=fileMaxSize*1024*1024){
             return this.writeFile(newpath,bytes);
-        }else if((file.length()+bytes.length)<=fileMaxSize){
+        }else if((file.length()+bytes.length)<=(fileMaxSize*1024*1024)){
             this.appendToFile(path,bytes);
             return pre;
         }else{
-            byte[]byte1=new byte[(int) (fileMaxSize-file.length())];
+            byte[]byte1=new byte[(int) (fileMaxSize*1024*1024-file.length())];
             byte[]byte2=new byte[bytes.length-byte1.length];
             this.appendToFile(path,byte1);
             return this.writeFile(newpath,byte2);

@@ -14,25 +14,73 @@ public class ParseUtil {
         PcapData res=new PcapData();
         int searchState = -1;//记录解析完一条数据了吗
         int searchDataState=0;//记录解析到数据了吗
-        int CurrPt = 0;//记录缓存的
+
         byte[] Head = new byte[4];
         int HeadPtr = 0;
+
+
+
+
+        int type=0;
+        int currPt = 0;//记录缓存的
         int dwFrameLen = 0; //记录所有的
         byte[] arrMsgBuff = new byte[20000];//一条message的缓存
-        short PackageLen = 0;//一条message（即帧头+pcap一行数据的头+内容）的全长
         boolean haveSearchCompleteMessage=true;
+        short PackageLen = 0;//一条message（即帧头+pcap一行数据的头+内容）的全长
+        short dataLen;
 
         try (
                 DataInputStream inputStream = new DataInputStream(socket.getInputStream());
         ) {
             while (socket.isConnected()) {
+                PcapData pcapData=new PcapData();
+                pcapData.setReveType(type);
                 // 开始接收文件
-                byte[] data = new byte[20000];//tcp缓存
-                int length = -1;
-                // 读取数据到内存中
-                length = inputStream.read(data);
-                if (length > 0) {
-                    do {
+                if (type == 0) {
+                    byte[] head = new byte[24];//tcp缓存
+                    int length = -1;
+                    // 读取数据到内存中
+                    length = inputStream.read(head);
+                    if (length==24) {
+                        byte[] head1 =new byte[4];
+                        System.arraycopy(arrMsgBuff, 0, head1, 0, 4);
+                        pcapData.setHeader(new String(head1));
+
+                        byte[] pos = new byte[2];
+                        System.arraycopy(arrMsgBuff, 4, pos, 0, 2);
+                        pcapData.setSatPos(Trans.byte2short(pos));
+
+                        byte[] fre = new byte[4];
+                        System.arraycopy(arrMsgBuff, 6, fre, 0, 4);
+                        pcapData.setFrequence(Trans.byte2int(fre));
+
+                        byte[]s_PackageLen =new byte[2];
+                        System.arraycopy(arrMsgBuff, 12, s_PackageLen, 0, 2);
+                        PackageLen=Trans.byte2short(s_PackageLen);
+                        pcapData.setLength(PackageLen);
+                        pcapData.setModeCode(String.valueOf(arrMsgBuff[10]));
+                        pcapData.setCheck(String.valueOf(arrMsgBuff[11]));
+
+                        byte[] time = new byte[8];
+                        System.arraycopy(arrMsgBuff, 14, time, 0, 8);
+                        pcapData.setTime0(Trans.bytes2Long(time));
+
+                        byte[] id = new byte[2];
+                        System.arraycopy(arrMsgBuff, 22, id, 0, 2);
+                        pcapData.setUserId(Trans.byte2short(id));
+
+                        byte []data=new byte[20000];
+                        dataLen= (short) (PackageLen-24);
+                        for(int i=0;i*data.length<dataLen;i++){
+                            inputStream.read(data);
+                        }
+
+                    }
+
+
+
+
+                    /*do {
                         searchState = 0;
                         //
                         for (byte ch = 0; CurrPt < length; CurrPt++) {
@@ -127,7 +175,7 @@ public class ParseUtil {
 
                         arrMsgBuff = new byte[20000];
                         Head = new byte[4];
-                    } while (searchState == 1);
+                    } while (searchState == 1);*/
                 } else {
                     break;
                 }

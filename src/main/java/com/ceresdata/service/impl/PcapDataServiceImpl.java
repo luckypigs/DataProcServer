@@ -30,4 +30,9 @@ public class PcapDataServiceImpl implements PcapDataService {
     public void save_userInfo(UserInfo userInfo) {
         pcapDataDAO.save_userInfo(userInfo);
     }
+
+    @Override
+    public void update_userInfo(UserInfo userInfo) {
+        pcapDataDAO.update_userInfo(userInfo);
+    }
 }

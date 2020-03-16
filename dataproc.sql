@@ -451,10 +451,11 @@ CREATE TABLE IF NOT EXISTS `pkt_info` (
   `Frequence` int(11) DEFAULT NULL,
   `ModeCode` int(11) DEFAULT NULL,
   `Length` int(11) DEFAULT NULL,
-  `Time0` time DEFAULT NULL,
+  `Time0` datetime DEFAULT NULL,
   `intf_type` int(11) DEFAULT NULL,
   `Check` int(11) DEFAULT NULL,
-  `Time1` time DEFAULT NULL
+  `Time1` datetime DEFAULT NULL,
+  `path` varchar(128) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 COMMENT='用户收集端口输入的所有的报文信息';
 
 -- 数据导出被取消选择。

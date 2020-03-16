@@ -3,7 +3,9 @@ package com.ceresdata.pojo;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,12 +15,15 @@ import java.util.List;
 public class ServerConfig {
     private int streamState;// 流服务的状态（0处于停止状态，1：运行状态）
     private int fileServerState;// 文件处理状态（0处于停止状态，1：运行状态）
-    private String srcRootDir;// 源存储位置
-    private String descRootDir;// 目标存储位置
+    private String srcRootDir;// 离线源存储位置
+    private String descRootDir;// 离线目标存储位置
+    private String filePath; //在线目标存储位置
     private int fileMaxSize = 50;// 文件大小（M）
     private int fileMaxMinute = 30;// 接收文件（minute）
     private int r_port; //r类型数据的端口号
-    private int position;
+    private int position; //阵地信息
+    private String r_dir; //r类型数据目录
+    private int readFiles; //已读文件数
     // 连接站点列表
     private List<Connect> connectList = new ArrayList<Connect>();
 
@@ -94,6 +99,30 @@ public class ServerConfig {
         this.connectList = connectList;
     }
 
+    public String getR_dir() {
+        return r_dir;
+    }
+
+    public void setR_dir(String r_dir) {
+        this.r_dir = r_dir;
+    }
+
+    public int getReadFiles() {
+        return readFiles;
+    }
+
+    public void setReadFiles(int readFiles) {
+        this.readFiles = readFiles;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
+
     /**
      * 添加连接
      * @param connect
@@ -122,6 +151,8 @@ public class ServerConfig {
      * @param json
      */
     public void reset(String json){
+        //ServerConfig entity = JSONObject.parseObject(json, ServerConfig.class);
+
         JSONObject jsonObject = JSON.parseObject(json);
         this.srcRootDir = jsonObject.getString("srcRootDir");
         this.descRootDir = jsonObject.getString("descRootDir");
@@ -130,6 +161,7 @@ public class ServerConfig {
         this.streamState = jsonObject.getIntValue("streamState");
         this.fileServerState = jsonObject.getIntValue("fileServerState");
         this.position = jsonObject.getIntValue("position");
+        this.r_port = jsonObject.getInteger("r_port");
 
         JSONArray jsonArray = jsonObject.getJSONArray("connectList");
         if(jsonArray != null){
@@ -138,7 +170,8 @@ public class ServerConfig {
                 Connect connect = new Connect();
                 connect.setIp(temp.getString("ip"));
                 connect.setPort(temp.getIntValue("port"));
-                continue;
+                connect.setSocktState(temp.getBoolean("state"));
+                //continue;
             }
         }
     }

@@ -1,6 +1,10 @@
 package com.ceresdata.controller;
 
-import com.ceresdata.service.impl.PcapDataServiceImpl;
+import com.ceresdata.multiThreadServer.MultiThreadOfflineClient;
+import com.ceresdata.multiThreadServer.MultiThreadSocketClient;
+import com.ceresdata.pojo.FileSize;
+import com.ceresdata.pojo.ServerConfig;
+import com.ceresdata.service.PcapDataService;
 import com.ceresdata.util.ResultMsg;
 import com.ceresdata.config.DataProcessConfig;
 import com.ceresdata.multiThreadServer.DataProcessServer;
@@ -17,9 +21,10 @@ import javax.annotation.PostConstruct;
 public class LoginController {
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     // 数据处理服务端
-    DataProcessServer dataProcessServer = new DataProcessServer();
     @Autowired
-    PcapDataServiceImpl pcapDataService;
+    DataProcessServer dataProcessServer;
+    @Autowired
+    PcapDataService pcapDataService;
     @Autowired
     DataProcessConfig dataProcessConfig;
 
@@ -34,9 +39,14 @@ public class LoginController {
      * 启动socketServer
      */
     @CrossOrigin
-    @GetMapping(value = "/api/startSocketServer")
+    @PostMapping(value = "/api/startSocketServer")
     @ResponseBody
-    public ResultMsg startSocketServer(){
+    public ResultMsg startSocketServer(@RequestBody FileSize fileSize){
+        ServerConfig serverConfig=dataProcessServer.getConfig();
+        serverConfig.setFileMaxMinute(fileSize.getFileMaxMinute());
+        serverConfig.setFileMaxSize(fileSize.getFileMaxSize());
+        serverConfig.setFilePath(fileSize.getFilePath());
+
         dataProcessServer.startServer();
         return ResultMsg.success("启动服务成功");
     }
@@ -45,7 +55,7 @@ public class LoginController {
      * 停止socket
      */
     @CrossOrigin
-    @GetMapping(value = "/api/stopSocketServer")
+    @RequestMapping(value = "/api/stopSocketServer")
     @ResponseBody
     public ResultMsg stopSocketServer(){
         dataProcessServer.stopServer();
@@ -55,9 +65,10 @@ public class LoginController {
     /**
      * 断开连接
      */
-    @GetMapping(value = "/api/disconnect")
+    @CrossOrigin
+    @PostMapping(value = "/api/disconnect")
     @ResponseBody
-    public ResultMsg disconnect(Connect connect){
+    public ResultMsg disconnect(@RequestBody Connect connect){
        boolean flag =  this.dataProcessServer.disconnect(connect);
        if(flag){
            return ResultMsg.success("断开连接成功");
@@ -69,9 +80,10 @@ public class LoginController {
     /**
      * 开始建立连接
      */
-    @GetMapping(value = "/api/connect")
+    @CrossOrigin
+    @PostMapping(value = "/api/connect" )
     @ResponseBody
-    public ResultMsg connect(Connect connect){
+    public ResultMsg connect(@RequestBody Connect connect){
         boolean flag =  this.dataProcessServer.connect(connect);
         if(flag){
             return ResultMsg.success("建立连接成功");
@@ -81,17 +93,71 @@ public class LoginController {
     }
 
     /**
-     * 获取日志
+     * 获取在线日志
      */
-    @GetMapping(value = "/api/log")
+    @CrossOrigin
+    @GetMapping(value = "/api/onlineLog")
     @ResponseBody
-    public ResultMsg getLog(Connect connect){
-        boolean flag =  this.dataProcessServer.connect(connect);
-        if(flag){
-            return ResultMsg.success("建立连接成功");
-        }else{
-            return ResultMsg.error("建立连接失败");
-        }
+    public ResultMsg getOnlineLog(){
+        return MultiThreadSocketClient.getLog();
+    }
+
+    /**
+     * 开始离线传输
+     */
+    @CrossOrigin
+    @PostMapping(value = "/api/startOfflineServer")
+    @ResponseBody
+    public ResultMsg startOfflineServer(@RequestBody FileSize fileSize){
+        dataProcessServer.startOfflineServer(fileSize);
+        return ResultMsg.success("启动服务成功");
+    }
+
+    /**
+     * 停止离线传输
+     */
+    @CrossOrigin
+    @RequestMapping(value = "/api/stopOfflineServer")
+    @ResponseBody
+    public ResultMsg stopOfflineServer(){
+        dataProcessServer.stopOfflineServer();
+        return ResultMsg.success("停止服务成功");
+    }
+
+    /**
+     * 获取离线日志
+     */
+    @GetMapping(value = "/api/offlineLog")
+    @ResponseBody
+    public ResultMsg getOfflineLog(){
+        return MultiThreadOfflineClient.getLog();
+    }
+
+    /**
+     * 启动获取列表
+     */
+    @CrossOrigin
+    @GetMapping(value = "/api/getClients")
+    @ResponseBody
+    public ResultMsg getClients(){
+        return new ResultMsg(dataProcessServer.getConfig().getConnectList());
+
+    }
+
+    /**
+     * 获取路径
+     */
+    @CrossOrigin
+    @GetMapping(value = "/api/getPath")
+    @ResponseBody
+    public ResultMsg getPath(){
+        return new ResultMsg(dataProcessServer.getFileSize());
+
+    }
+    @GetMapping("/test")
+    @ResponseBody
+    public String test(){
+        return "hello";
     }
 
 
