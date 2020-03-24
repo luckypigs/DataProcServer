@@ -19,16 +19,22 @@ public class PcapDataDAO {
     public void save(PcapData pcapData){
         String sql;
         if(pcapData.getReveType()==0){
-            sql="insert into dataclean_pkt_info (`Header`,`SatPos`,`Frequence`,`ModeCode`,`Check`,`Length`,`Time0`,`user_id`,`intf_type`,`file_path`" +
+            sql="insert into dataclean_pkt_info (`position`,`Header`,`SatPos`,`Frequence`,`ModeCode`,`Check`," +
+                    "`Length`,`Time0`,`user_id`,`intf_type`,`file_path`" +
                     ",`datetime`,`intf_nouse`) " +
-                    "values (?,?,?,?,?,?,FROM_UNIXTIME(?),?,?,?,FROM_UNIXTIME(?),?)";
-            jdbcTemplate.update(sql,new Object[]{pcapData.getHeader(),pcapData.getSatPos(),pcapData.getFrequence(),pcapData.getModeCode(),pcapData.getCheck(),pcapData.getLength(),pcapData.getTime0()/1000,pcapData.getUserId()
+                    "values (?,?,?,?,?,?,?,FROM_UNIXTIME(?),?,?,?,FROM_UNIXTIME(?),?)";
+            jdbcTemplate.update(sql,new Object[]{pcapData.getPosition(),pcapData.getHeader(),pcapData.getSatPos(),
+                    pcapData.getFrequence(),pcapData.getModeCode(),pcapData.getCheck(),pcapData.getLength(),
+                    pcapData.getTime0()/1000,pcapData.getUserId()
             ,2,pcapData.getPath(),pcapData.getDatetime()/1000,pcapData.getIntf_nouse()});
         }else{
-            sql="insert into dataclean_pkt_info (`Header`,`SatPos`,`Frequence`,`ModeCode`,`Length`,`Time0`,`Time1`,`user_id`,`intf_type`,`file_path`" +
+            sql="insert into dataclean_pkt_info (`position`,`Header`,`SatPos`,`Frequence`,`ModeCode`,`Length`," +
+                    "`Time0`,`Time1`,`user_id`,`intf_type`,`file_path`" +
                     ",`datetime`,`intf_nouse`)" +
-                    " values (?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?)";
-            jdbcTemplate.update(sql,new Object[]{pcapData.getHeader(),pcapData.getSatPos(),pcapData.getFrequence(),pcapData.getModeCode(),pcapData.getLength(),pcapData.getTime0()/1000,pcapData.getTime1()/1000,pcapData.getUserId()
+                    " values (?,?,?,?,?,?,FROM_UNIXTIME(?),FROM_UNIXTIME(?),?,?,?,FROM_UNIXTIME(?),?)";
+            jdbcTemplate.update(sql,new Object[]{pcapData.getPosition(),pcapData.getHeader(),pcapData.getSatPos(),
+                    pcapData.getFrequence(),pcapData.getModeCode(),pcapData.getLength(),pcapData.getTime0()/1000,
+                    pcapData.getTime1()/1000,pcapData.getUserId()
                     ,1,pcapData.getPath(),pcapData.getDatetime()/1000,pcapData.getIntf_nouse()});
         }
 
@@ -53,10 +59,12 @@ public class PcapDataDAO {
     public void save_userInfo(PcapData pcapData,long now){
         String sql;
         if(pcapData.getReveType()==0){
-            sql="insert into dataclean_user_info (`user_id`,`position`,`file_rpath`,`file_fpath`,`datetime`) values (?,?,?,?,FROM_UNIXTIME(?))";
+            sql="insert into dataclean_user_info (`user_id`,`position`,`file_rpath`,`file_fpath`,`datetime`) values " +
+                    "(?,?,?,?,FROM_UNIXTIME(?))";
             jdbcTemplate.update(sql,pcapData.getUserId(),pcapData.getPosition(),"","",now/1000);
         }else{
-            sql="insert into dataclean_user_info (`user_id`,`position`,`file_rpath`,`file_fpath`,`datetime`) values (?,?,?,?,FROM_UNIXTIME(?))";
+            sql="insert into dataclean_user_info (`user_id`,`position`,`file_rpath`,`file_fpath`,`datetime`) values " +
+                    "(?,?,?,?,FROM_UNIXTIME(?))";
             jdbcTemplate.update(sql,pcapData.getUserId(),pcapData.getPosition(),"","",now/1000);
         }
 

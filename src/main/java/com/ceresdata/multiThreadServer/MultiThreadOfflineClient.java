@@ -81,6 +81,7 @@ public class MultiThreadOfflineClient  implements Runnable{
                         PcapData pcapdata = ParseUtil.createPcapData(head, type);
                         PackageLen = pcapdata.getLength();
 						pcapdata.setPosition(position);
+						pcapdata.setDatetime(now);
                         //初始化
                         PcapFileUtil pcapFileUtil = createPcapFileUtil();
 

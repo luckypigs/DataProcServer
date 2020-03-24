@@ -92,6 +92,7 @@ public class MultiThreadSocketClient implements Runnable{
 
                     String pathname = getPathname(pcapdata);
                     pcapdata.setPath(pathname);
+                    pcapdata.setDatetime(now);
                     service.save(pcapdata);
 
                     // 保存到 pcap 文件中 (根据规则，如果文件超过 30 M 或 时间大于30分钟，重新生成新文件)
