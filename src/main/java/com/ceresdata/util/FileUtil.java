@@ -26,7 +26,7 @@ public class FileUtil {
     public static  void writeFile(String file,String content,String charset) throws Exception {
         try{
             OutputStream out=new FileOutputStream(file);
-            BufferedWriter rd   =   new BufferedWriter(new OutputStreamWriter(out,charset));
+            BufferedWriter rd=new BufferedWriter(new OutputStreamWriter(out,charset));
             rd.write(content);
             rd.close();
             out.close();

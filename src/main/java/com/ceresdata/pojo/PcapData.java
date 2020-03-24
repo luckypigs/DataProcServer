@@ -15,6 +15,9 @@ public class PcapData {
     private short userId;//用户id
     private String path;// 文件路径
     private int reveType;// 接收方式（0,1）
+    private int intf_nouse; //没用
+    private int position;
+    private long datetime; //增加的时间
 
     public String getHeader() {
         return header;
@@ -102,5 +105,29 @@ public class PcapData {
 
     public void setReveType(int reveType) {
         this.reveType = reveType;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
+    }
+
+    public int getIntf_nouse() {
+        return intf_nouse;
+    }
+
+    public void setIntf_nouse(int intf_nouse) {
+        this.intf_nouse = intf_nouse;
+    }
+
+    public long getDatetime() {
+        return datetime;
+    }
+
+    public void setDatetime(long datetime) {
+        this.datetime = datetime;
     }
 }

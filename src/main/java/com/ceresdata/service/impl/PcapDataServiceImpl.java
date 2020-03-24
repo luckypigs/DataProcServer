@@ -2,7 +2,6 @@ package com.ceresdata.service.impl;
 
 import com.ceresdata.dao.PcapDataDAO;
 import com.ceresdata.pojo.PcapData;
-import com.ceresdata.pojo.UserInfo;
 import com.ceresdata.service.PcapDataService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,17 +21,17 @@ public class PcapDataServiceImpl implements PcapDataService {
     }
 
     @Override
-    public String getFilePath(int user_id) {
-        return pcapDataDAO.getFilePath(user_id);
+    public String getFilePath(PcapData pcapData) {
+        return pcapDataDAO.getFilePath(pcapData);
     }
 
     @Override
-    public void save_userInfo(UserInfo userInfo) {
-        pcapDataDAO.save_userInfo(userInfo);
+    public void save_userInfo(PcapData pcapData,long now) {
+        pcapDataDAO.save_userInfo(pcapData,now);
     }
 
     @Override
-    public void update_userInfo(UserInfo userInfo) {
-        pcapDataDAO.update_userInfo(userInfo);
+    public void update_userInfo(PcapData pcapData) {
+        pcapDataDAO.update_userInfo(pcapData);
     }
 }

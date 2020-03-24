@@ -33,4 +33,5 @@ public class Connect {
     public void setSocktState(boolean socktState) {
         this.socktState = socktState;
     }
+
 }

@@ -61,8 +61,7 @@ public class Trans {
      * 将时间转换为时间戳
      */
     public static long dateToStamp(String s) throws ParseException {
-        String res;
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy.MM.dd HH-mm-ss");
         Date date = simpleDateFormat.parse(s);
         long ts = date.getTime();
         return ts;
@@ -70,11 +69,10 @@ public class Trans {
     /*
      * 将时间戳转换为时间
      */
-    public static String stampToDate(String lt){
+    public static String stampToDate(long lt){
         String res;
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        Date date = new Date(lt);
-        res = simpleDateFormat.format(date);
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy.MM.dd HH-mm-ss");
+        res = simpleDateFormat.format(lt);
         return res;
     }
 }

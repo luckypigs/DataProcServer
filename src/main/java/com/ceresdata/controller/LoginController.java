@@ -3,7 +3,6 @@ package com.ceresdata.controller;
 import com.ceresdata.multiThreadServer.MultiThreadOfflineClient;
 import com.ceresdata.multiThreadServer.MultiThreadSocketClient;
 import com.ceresdata.pojo.FileSize;
-import com.ceresdata.pojo.ServerConfig;
 import com.ceresdata.service.PcapDataService;
 import com.ceresdata.util.ResultMsg;
 import com.ceresdata.config.DataProcessConfig;
@@ -42,12 +41,7 @@ public class LoginController {
     @PostMapping(value = "/api/startSocketServer")
     @ResponseBody
     public ResultMsg startSocketServer(@RequestBody FileSize fileSize){
-        ServerConfig serverConfig=dataProcessServer.getConfig();
-        serverConfig.setFileMaxMinute(fileSize.getFileMaxMinute());
-        serverConfig.setFileMaxSize(fileSize.getFileMaxSize());
-        serverConfig.setFilePath(fileSize.getFilePath());
-
-        dataProcessServer.startServer();
+        dataProcessServer.startServer(fileSize);
         return ResultMsg.success("启动服务成功");
     }
 
@@ -153,11 +147,6 @@ public class LoginController {
     public ResultMsg getPath(){
         return new ResultMsg(dataProcessServer.getFileSize());
 
-    }
-    @GetMapping("/test")
-    @ResponseBody
-    public String test(){
-        return "hello";
     }
 
 
